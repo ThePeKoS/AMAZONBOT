@@ -7,8 +7,8 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID", "@your_channel_username")
 
-# Min discount percentage to trigger notification (e.g., 10 means >= 10% price drop)
-MIN_DISCOUNT_PERCENT = float(os.getenv("MIN_DISCOUNT_PERCENT", "5.0"))
+# Min discount percentage to trigger notification (Impostato a >= 30%)
+MIN_DISCOUNT_PERCENT = float(os.getenv("MIN_DISCOUNT_PERCENT", "30.0"))
 
 # Check interval in minutes (Impostato a 1 minuto per controlli ultra-veloci)
 CHECK_INTERVAL_MINUTES = int(os.getenv("CHECK_INTERVAL_MINUTES", "1"))

@@ -12,20 +12,43 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, MIN_DISCOUNT_PERCENT
 logger = logging.getLogger(__name__)
 db = DatabaseManager()
 
+def detect_category_hashtag(title: str) -> str:
+    """Rileva la categoria dal titolo del prodotto e restituisce gli Hashtag correlati."""
+    title_lower = title.lower()
+    hashtags = []
+    
+    if any(k in title_lower for k in ["ps5", "ps4", "playstation", "xbox", "nintendo", "gaming", "console", "joystick"]):
+        hashtags.append("#Gaming")
+    if any(k in title_lower for k in ["pc", "laptop", "notebook", "ram", "ssd", "monitor", "tastiera", "mouse", "computer", "intel", "amd"]):
+        hashtags.append("#Informatica")
+    if any(k in title_lower for k in ["smartphone", "iphone", "samsung", "xiaomi", "redmi", "auricolari", "cuffie", "smartwatch"]):
+        hashtags.append("#Elettronica")
+    if any(k in title_lower for k in ["tv", "smart tv", "soundbar", "altoparlante", "speaker", "proiettore"]):
+        hashtags.append("#Tech")
+    if any(k in title_lower for k in ["casa", "cucina", "robot", "aspirapolvere", "friggitrice", "macchina caffe"]):
+        hashtags.append("#Casa")
+
+    if not hashtags:
+        hashtags.append("#OffertaAmazon")
+
+    return " ".join(hashtags)
+
 def format_deal_message(deal_info: dict) -> str:
-    """Formatta il messaggio dell'offerta per il canale o la chat."""
+    """Formatta il messaggio dell'offerta per il canale o la chat con uno stile ricco ed hashtag."""
     title = deal_info['title']
     current_price = deal_info['current_price']
     previous_price = deal_info['previous_price']
     discount = deal_info['discount_percent']
     url = deal_info['url']
+    hashtags = detect_category_hashtag(title)
 
     msg = (
-        f"🔥 **SUPER OFFERTA AMAZON!** 🔥\n\n"
+        f"🔥 **SUPER OFFERTA AMAZON (-{discount:.0f}%)** 🔥\n\n"
         f"📦 **{title[:120]}...**\n\n"
         f"❌ Prezzo precedente: ~~{previous_price:.2f}€~~\n"
         f"✅ **Nuovo Prezzo: {current_price:.2f}€**\n"
-        f"📉 **Sconto: -{discount:.1f}%** (Risparmi {(previous_price - current_price):.2f}€)\n\n"
+        f"📉 **Risparmi: {(previous_price - current_price):.2f}€ (-{discount:.0f}%)**\n\n"
+        f"{hashtags}\n\n"
         f"🔗 [Acquista ora su Amazon]({url})"
     )
     return msg
