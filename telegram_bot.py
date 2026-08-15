@@ -8,6 +8,7 @@ from telegram.ext import (
 from database import DatabaseManager
 from amazon_tracker import extract_asin, fetch_amazon_product
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, MIN_DISCOUNT_PERCENT
+from deduplicator import is_asin_already_sent, mark_asin_as_sent
 
 logger = logging.getLogger(__name__)
 db = DatabaseManager()
