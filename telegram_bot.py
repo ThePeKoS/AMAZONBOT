@@ -61,15 +61,15 @@ async def send_deal_to_channel(context: ContextTypes.DEFAULT_TYPE, deal_info: di
     asin = deal_info.get("asin")
     current_price = deal_info.get("current_price", 0.0)
 
-    # 1. Controllo in-memory cache: se già inviato in questa sessione, salta tassativamente!
-    if asin in SENT_ASINS_CACHE:
-        logger.info(f"🚫 [IN-MEMORY BLOCKED] ASIN {asin} già inviato in questa sessione.")
+    # 1. Controllo in-memory locker
+    if asin and is_asin_already_sent(asin):
+        logger.info(f"🚫 [BLOCKED DUP] ASIN {asin} già inviato al canale.")
         return
 
     # 2. Controllo database locale
     if asin and db.is_deal_already_sent(asin, current_price):
-        SENT_ASINS_CACHE.add(asin)
-        logger.info(f"🚫 [DB BLOCKED] Offerta per ASIN {asin} già pubblicata al prezzo {current_price}€. Ignorato duplicato.")
+        mark_asin_as_sent(asin)
+        logger.info(f"🚫 [DB BLOCKED DUP] ASIN {asin} registrato nel DB come già pubblicato.")
         return
 
     text = format_deal_message(deal_info)
@@ -97,9 +97,9 @@ async def send_deal_to_channel(context: ContextTypes.DEFAULT_TYPE, deal_info: di
                 reply_markup=reply_markup
             )
         
-        # Registra l'ASIN sia nella cache di memoria che nel database
+        # Segna l'ASIN nel memory locker e nel DB
         if asin:
-            SENT_ASINS_CACHE.add(asin)
+            mark_asin_as_sent(asin)
             db.mark_deal_as_sent(asin, current_price)
 
         logger.info(f"✅ Offerta inviata al canale per ASIN {deal_info['asin']}")
