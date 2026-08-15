@@ -1,11 +1,15 @@
 import sqlite3
+import os
 from typing import List, Optional, Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
 
+# Usa una directory sicura / per la persistenza del DB se specificata
+DB_FILE = os.getenv("DB_PATH", "amazon_tracker.db")
+
 class DatabaseManager:
-    def __init__(self, db_path: str = "amazon_tracker.db"):
+    def __init__(self, db_path: str = DB_FILE):
         self.db_path = db_path
         self.init_db()
 
@@ -13,7 +17,7 @@ class DatabaseManager:
         return sqlite3.connect(self.db_path)
 
     def init_db(self):
-        """Crea la tabella prodotti e la tabella dello storico prezzi se non esistono."""
+        """Crea le tabelle se non esistono."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -48,7 +52,7 @@ class DatabaseManager:
                 )
             """)
             conn.commit()
-            logger.info("Database inizializzato con successo.")
+
 
     def is_deal_already_sent(self, asin: str, current_price: float = 0.0) -> bool:
         """Verifica se l'offerta per questo ASIN è già stata inviata sul canale."""

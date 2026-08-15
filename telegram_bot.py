@@ -12,6 +12,9 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, MIN_DISCOUNT_PERCENT
 logger = logging.getLogger(__name__)
 db = DatabaseManager()
 
+# In-Memory Cache degli ASIN già pubblicati nel canale per prevenire duplicati
+SENT_ASINS_CACHE = set()
+
 def detect_category_hashtag(title: str) -> str:
     """Rileva la categoria dal titolo del prodotto e restituisce gli Hashtag correlati."""
     title_lower = title.lower()
@@ -58,9 +61,15 @@ async def send_deal_to_channel(context: ContextTypes.DEFAULT_TYPE, deal_info: di
     asin = deal_info.get("asin")
     current_price = deal_info.get("current_price", 0.0)
 
-    # Controllo anti-duplicati: se il prodotto è già stato inviato a questo prezzo o inferiore, ignora
+    # 1. Controllo in-memory cache: se già inviato in questa sessione, salta tassativamente!
+    if asin in SENT_ASINS_CACHE:
+        logger.info(f"🚫 [IN-MEMORY BLOCKED] ASIN {asin} già inviato in questa sessione.")
+        return
+
+    # 2. Controllo database locale
     if asin and db.is_deal_already_sent(asin, current_price):
-        logger.info(f"Offerta per ASIN {asin} già pubblicata al prezzo {current_price}€. Ignorato duplicato.")
+        SENT_ASINS_CACHE.add(asin)
+        logger.info(f"🚫 [DB BLOCKED] Offerta per ASIN {asin} già pubblicata al prezzo {current_price}€. Ignorato duplicato.")
         return
 
     text = format_deal_message(deal_info)
@@ -88,13 +97,15 @@ async def send_deal_to_channel(context: ContextTypes.DEFAULT_TYPE, deal_info: di
                 reply_markup=reply_markup
             )
         
-        # Segna l'offerta come inviata nel database
+        # Registra l'ASIN sia nella cache di memoria che nel database
         if asin:
+            SENT_ASINS_CACHE.add(asin)
             db.mark_deal_as_sent(asin, current_price)
 
-        logger.info(f"Offerta inviata al canale per ASIN {deal_info['asin']}")
+        logger.info(f"✅ Offerta inviata al canale per ASIN {deal_info['asin']}")
     except Exception as e:
         logger.error(f"Errore durante l'invio al canale Telegram: {e}")
+
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
