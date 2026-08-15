@@ -36,7 +36,16 @@ def main():
     # Avvia il server HTTP in un thread separato per abilitare il piano FREE su Render
     threading.Thread(target=run_health_check_server, daemon=True).start()
 
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    # Inizializza l'applicazione Telegram Bot con timeout aumentato a 30s per i server cloud
+    app = (
+        ApplicationBuilder()
+        .token(TELEGRAM_BOT_TOKEN)
+        .connect_timeout(30.0)
+        .read_timeout(30.0)
+        .get_updates_connect_timeout(30.0)
+        .get_updates_read_timeout(30.0)
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("add", add_product_command))

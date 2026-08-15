@@ -88,14 +88,20 @@ async def send_deal_to_channel(context: ContextTypes.DEFAULT_TYPE, deal_info: di
                 photo=image_url,
                 caption=text,
                 parse_mode="Markdown",
-                reply_markup=reply_markup
+                reply_markup=reply_markup,
+                read_timeout=30.0,
+                write_timeout=30.0,
+                connect_timeout=30.0
             )
         else:
             await context.bot.send_message(
                 chat_id=TELEGRAM_CHANNEL_ID,
                 text=text,
                 parse_mode="Markdown",
-                reply_markup=reply_markup
+                reply_markup=reply_markup,
+                read_timeout=30.0,
+                write_timeout=30.0,
+                connect_timeout=30.0
             )
         
         # Segna l'ASIN nel memory locker e nel DB
