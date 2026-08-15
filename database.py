@@ -50,16 +50,16 @@ class DatabaseManager:
             conn.commit()
             logger.info("Database inizializzato con successo.")
 
-    def is_deal_already_sent(self, asin: str, current_price: float) -> bool:
-        """Verifica se l'offerta per questo ASIN allo stesso prezzo (o inferiore) è già stata inviata."""
+    def is_deal_already_sent(self, asin: str, current_price: float = 0.0) -> bool:
+        """Verifica se l'offerta per questo ASIN è già stata inviata sul canale."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT last_sent_price FROM sent_deals WHERE asin = ?", (asin,))
             row = cursor.fetchone()
-            if row:
+            if row is not None:
+                # Se è già stato inviato sul canale, non reinviare mai più a meno che il prezzo non sia calato ulteriormente
                 last_sent_price = row[0]
-                # Se è già stata inviata a un prezzo uguale o minore, non reinviare
-                if current_price >= last_sent_price:
+                if current_price >= last_sent_price or current_price == 0.0 or current_price == 999999.0:
                     return True
             return False
 

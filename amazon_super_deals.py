@@ -61,6 +61,11 @@ def scan_all_super_deals(min_discount_filter: float = 20.0, max_results: int = 3
 
                 seen_asins.add(asin)
 
+                # FILTRO ANTI-DUPLICATO RIGIDO: se l'ASIN è già stato inviato nel canale, saltalo subito!
+                if db.is_deal_already_sent(asin, 999999.0):
+                    logger.info(f"ASIN {asin} già inviato precedentemente sul canale. Saltato.")
+                    continue
+
                 # Estrazione prezzo attuale e sconto/prezzo di listino dalla card o dalla pagina del prodotto
                 # Prova prima rapida sulla card
                 price_elem = card.find("span", {"class": "a-price-whole"})
