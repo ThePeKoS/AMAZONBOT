@@ -39,8 +39,43 @@ class DatabaseManager:
                     FOREIGN KEY (asin) REFERENCES products (asin)
                 )
             """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sent_deals (
+                    asin TEXT PRIMARY KEY,
+                    last_sent_price REAL NOT NULL,
+                    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
             conn.commit()
             logger.info("Database inizializzato con successo.")
+
+    def is_deal_already_sent(self, asin: str, current_price: float) -> bool:
+        """Verifica se l'offerta per questo ASIN allo stesso prezzo (o inferiore) è già stata inviata."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT last_sent_price FROM sent_deals WHERE asin = ?", (asin,))
+            row = cursor.fetchone()
+            if row:
+                last_sent_price = row[0]
+                # Se è già stata inviata a un prezzo uguale o minore, non reinviare
+                if current_price >= last_sent_price:
+                    return True
+            return False
+
+    def mark_deal_as_sent(self, asin: str, current_price: float):
+        """Registra l'offerta come inviata nel canale."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO sent_deals (asin, last_sent_price)
+                VALUES (?, ?)
+                ON CONFLICT(asin) DO UPDATE SET
+                    last_sent_price = excluded.last_sent_price,
+                    sent_at = CURRENT_TIMESTAMP
+            """, (asin, current_price))
+            conn.commit()
+
 
     def add_or_update_product(
         self,

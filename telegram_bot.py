@@ -31,7 +31,15 @@ def format_deal_message(deal_info: dict) -> str:
     return msg
 
 async def send_deal_to_channel(context: ContextTypes.DEFAULT_TYPE, deal_info: dict):
-    """Invia il post di offerta al canale Telegram specificato."""
+    """Invia il post di offerta al canale Telegram specificato evitando i duplicati."""
+    asin = deal_info.get("asin")
+    current_price = deal_info.get("current_price", 0.0)
+
+    # Controllo anti-duplicati: se il prodotto è già stato inviato a questo prezzo o inferiore, ignora
+    if asin and db.is_deal_already_sent(asin, current_price):
+        logger.info(f"Offerta per ASIN {asin} già pubblicata al prezzo {current_price}€. Ignorato duplicato.")
+        return
+
     text = format_deal_message(deal_info)
     image_url = deal_info.get("image_url")
     
@@ -56,9 +64,15 @@ async def send_deal_to_channel(context: ContextTypes.DEFAULT_TYPE, deal_info: di
                 parse_mode="Markdown",
                 reply_markup=reply_markup
             )
+        
+        # Segna l'offerta come inviata nel database
+        if asin:
+            db.mark_deal_as_sent(asin, current_price)
+
         logger.info(f"Offerta inviata al canale per ASIN {deal_info['asin']}")
     except Exception as e:
         logger.error(f"Errore durante l'invio al canale Telegram: {e}")
+
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Risposta al comando /start"""
