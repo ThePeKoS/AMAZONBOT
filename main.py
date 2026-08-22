@@ -58,7 +58,8 @@ def main():
         )
 
     print("Bot Amazon avviato ed in ascolto 24/7 nel Cloud...")
-    app.run_polling()
+    # drop_pending_updates=True cancella subito sessioni residue e previene errori 409 Conflict all'avvio
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
