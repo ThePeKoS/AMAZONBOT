@@ -66,10 +66,13 @@ def scan_all_super_deals(min_discount_filter: float = 20.0, max_results: int = 3
                 seen_asins.add(asin)
 
                 # FILTRO ANTI-DUPLICATO ISOLATO E RIGIDO (Normalizzato)
-                from deduplicator import is_asin_already_sent
+                from deduplicator import is_asin_already_sent, mark_asin_as_sent
                 if is_asin_already_sent(asin) or db.is_deal_already_sent(asin, 999999.0):
                     logger.info(f"🚫 [SKIPPED DUP] ASIN {asin} già inviato al canale. Saltato.")
                     continue
+
+                # Lock di protezione immediato dell'ASIN
+                mark_asin_as_sent(asin)
 
                 # Estrazione prezzo attuale e sconto/prezzo di listino dalla card o dalla pagina del prodotto
                 # Prova prima rapida sulla card
