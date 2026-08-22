@@ -1,7 +1,5 @@
 import os
 import sys
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram.ext import ApplicationBuilder, CommandHandler
 from config import TELEGRAM_BOT_TOKEN, CHECK_INTERVAL_MINUTES
 from telegram_bot import (
@@ -14,27 +12,10 @@ from telegram_bot import (
     check_prices_job,
 )
 
-# Mini Server Web per soddisfare l'Health Check del piano GRATUITO (Web Service) di Render
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        self.wfile.write(b"Bot Telegram Amazon Online 24/7!")
-
-def run_health_check_server():
-    port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
-    print(f"Health check server attivo sulla porta {port}")
-    server.serve_forever()
-
 def main():
     if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN":
         print("\n⚠️ TELEGRAM_BOT_TOKEN non impostato nelle variabili d'ambiente cloud!\n")
         return
-
-    # Avvia il server HTTP in un thread separato per abilitare il piano FREE su Render
-    threading.Thread(target=run_health_check_server, daemon=True).start()
 
     # Inizializza l'applicazione Telegram Bot con timeout aumentato a 30s per i server cloud
     app = (
@@ -62,9 +43,8 @@ def main():
             first=10
         )
 
-    print("Bot Amazon avviato ed in ascolto 24/7 nel Cloud (Piano Free)...")
+    print("Bot Amazon avviato ed in ascolto 24/7 nel Cloud...")
     app.run_polling()
 
 if __name__ == "__main__":
     main()
-
