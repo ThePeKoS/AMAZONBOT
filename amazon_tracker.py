@@ -33,16 +33,24 @@ def fetch_amazon_product(asin: str) -> Optional[Dict[str, Any]]:
 
         soup = BeautifulSoup(response.content, "lxml")
 
-        # 1. Titolo del prodotto
-        title_tag = soup.find("id", "productTitle") or soup.find("span", {"id": "productTitle"})
+        # 1. Titolo del prodotto (con fallback meta tag)
+        title_tag = (
+            soup.find("span", {"id": "productTitle"})
+            or soup.find("h1", {"id": "title"})
+            or soup.find("meta", {"property": "og:title"})
+            or soup.find("meta", {"name": "twitter:title"})
+        )
         if not title_tag:
             logger.warning(f"Impossibile trovare il titolo per l'ASIN {asin}")
             return None
-        title = title_tag.get_text().strip()
 
-        # 2. Prezzo del prodotto
+        if title_tag.name == "meta":
+            title = title_tag.get("content", "").strip()
+        else:
+            title = title_tag.get_text().strip()
+
+        # 2. Prezzo del prodotto (con selettori multipli di fallback)
         price = None
-        # Prova vari selettori di prezzo usati da Amazon
         price_whole = soup.find("span", {"class": "a-price-whole"})
         price_fraction = soup.find("span", {"class": "a-price-fraction"})
 
@@ -55,7 +63,16 @@ def fetch_amazon_product(asin: str) -> Optional[Dict[str, Any]]:
                 pass
 
         if price is None:
-            # Fallback selettore classico a-offscreen
+            # Fallback 1: meta price
+            meta_price = soup.find("meta", {"property": "og:price:amount"}) or soup.find("input", {"id": "twister-plus-price-data-price"})
+            if meta_price:
+                try:
+                    price = float(meta_price.get("content") or meta_price.get("value"))
+                except (ValueError, TypeError):
+                    pass
+
+        if price is None:
+            # Fallback 2: selettore classico a-offscreen
             offscreen_price = soup.find("span", {"class": "a-offscreen"})
             if offscreen_price:
                 price_text = offscreen_price.get_text().replace("€", "").replace(".", "").replace(",", ".").strip()
