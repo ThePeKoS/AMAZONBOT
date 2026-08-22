@@ -49,19 +49,23 @@ def scan_all_super_deals(min_discount_filter: float = 20.0, max_results: int = 3
             for card in cards:
                 asin = card.get("data-asin")
                 if not asin:
-                    # Cerca l'ASIN dai link interni
                     link = card.find("a", href=True)
                     if link:
                         m = re.search(r"(?:dp|product)/([A-Z0-9]{10})", link["href"])
                         if m:
                             asin = m.group(1)
 
-                if not asin or asin in seen_asins:
+                if not asin:
+                    continue
+
+                asin = asin.strip().upper()
+
+                if asin in seen_asins:
                     continue
 
                 seen_asins.add(asin)
 
-                # FILTRO ANTI-DUPLICATO ISOLATO E RIGIDO
+                # FILTRO ANTI-DUPLICATO ISOLATO E RIGIDO (Normalizzato)
                 from deduplicator import is_asin_already_sent
                 if is_asin_already_sent(asin) or db.is_deal_already_sent(asin, 999999.0):
                     logger.info(f"🚫 [SKIPPED DUP] ASIN {asin} già inviato al canale. Saltato.")
