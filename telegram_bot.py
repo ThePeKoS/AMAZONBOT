@@ -231,6 +231,19 @@ async def list_products_command(update: Update, context: ContextTypes.DEFAULT_TY
 
     await update.message.reply_text(msg, parse_mode="Markdown")
 
+async def remove_product_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Rimuove un prodotto tramite /remove <asin>"""
+    if not context.args:
+        await update.message.reply_text("⚠️ Specifica l'ASIN da rimuovere: `/remove B08N5WRWNW`", parse_mode="Markdown")
+        return
+
+    asin = context.args[0].upper()
+    success = db.remove_product(asin)
+    if success:
+        await update.message.reply_text(f"🗑️ Prodotto `{asin}` rimosso dal tracciamento.", parse_mode="Markdown")
+    else:
+        await update.message.reply_text(f"❌ Prodotto `{asin}` non trovato nel database.", parse_mode="Markdown")
+
 async def purge_channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Elimina gli ultimi N messaggi inviati nel canale Telegram (utilizzabile dall'admin)."""
     limit = 20
