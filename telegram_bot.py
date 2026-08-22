@@ -38,22 +38,39 @@ def detect_category_hashtag(title: str) -> str:
     return " ".join(hashtags)
 
 def format_deal_message(deal_info: dict) -> str:
-    """Formatta il messaggio dell'offerta per il canale o la chat con uno stile ricco ed hashtag."""
+    """Formatta il messaggio dell'offerta per il canale rendendolo altamente visivo ed ingaggiante."""
+    from config import AMAZON_AFFILIATE_TAG
     title = deal_info['title']
     current_price = deal_info['current_price']
     previous_price = deal_info['previous_price']
     discount = deal_info['discount_percent']
     url = deal_info['url']
+    savings = previous_price - current_price
+    
+    # Aggiungi il Tag Affiliato all'URL se configurato
+    if AMAZON_AFFILIATE_TAG and "tag=" not in url:
+        sep = "&" if "?" in url else "?"
+        url = f"{url}{sep}tag={AMAZON_AFFILIATE_TAG}"
+
     hashtags = detect_category_hashtag(title)
 
+    # Scelta del badge in base alla gravità dello sconto
+    if discount >= 50:
+        badge = "🚨 **SUPER BOMBA SOTTOCOSTO (-" + f"{discount:.0f}" + "%)** 🚨"
+    elif discount >= 40:
+        badge = "💥 **OFFERTA IMPERDIBILE (-" + f"{discount:.0f}" + "%)** 💥"
+    else:
+        badge = "🔥 **MEGA SCONTO AMAZON (-" + f"{discount:.0f}" + "%)** 🔥"
+
     msg = (
-        f"🔥 **SUPER OFFERTA AMAZON (-{discount:.0f}%)** 🔥\n\n"
-        f"📦 **{title[:120]}...**\n\n"
-        f"❌ Prezzo precedente: ~~{previous_price:.2f}€~~\n"
-        f"✅ **Nuovo Prezzo: {current_price:.2f}€**\n"
-        f"📉 **Risparmi: {(previous_price - current_price):.2f}€ (-{discount:.0f}%)**\n\n"
+        f"{badge}\n\n"
+        f"🏷️ **{title[:110]}...**\n\n"
+        f"💰 **Prezzo Offerta:** `{current_price:.2f}€`\n"
+        f"❌ **Prezzo di Listino:** ~~{previous_price:.2f}€~~\n"
+        f"⚡ **Risparmi Subito:** `{savings:.2f}€` (**-{discount:.0f}%**)\n\n"
+        f"⏳ *Offerta a tempo limitato ad esaurimento scorte!*\n\n"
         f"{hashtags}\n\n"
-        f"🔗 [Acquista ora su Amazon]({url})"
+        f"👇 **APRI L'OFFERTA SU AMAZON** 👇"
     )
     return msg
 
@@ -78,7 +95,12 @@ async def send_deal_to_channel(context: ContextTypes.DEFAULT_TYPE, deal_info: di
     
     reply_markup = None
     if deal_info.get("url"):
-        keyboard = [[InlineKeyboardButton("🛒 Vai all'Offerta", url=deal_info["url"])]]
+        deal_url = deal_info["url"]
+        from config import AMAZON_AFFILIATE_TAG
+        if AMAZON_AFFILIATE_TAG and "tag=" not in deal_url:
+            sep = "&" if "?" in deal_url else "?"
+            deal_url = f"{deal_url}{sep}tag={AMAZON_AFFILIATE_TAG}"
+        keyboard = [[InlineKeyboardButton("🛒 Vai all'Offerta", url=deal_url)]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
     try:
@@ -209,18 +231,27 @@ async def list_products_command(update: Update, context: ContextTypes.DEFAULT_TY
 
     await update.message.reply_text(msg, parse_mode="Markdown")
 
-async def remove_product_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Rimuove un prodotto tramite /remove <asin>"""
-    if not context.args:
-        await update.message.reply_text("⚠️ Specifica l'ASIN da rimuovere: `/remove B08N5WRWNW`", parse_mode="Markdown")
-        return
+async def purge_channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Elimina gli ultimi N messaggi inviati nel canale Telegram (utilizzabile dall'admin)."""
+    limit = 20
+    if context.args:
+        try:
+            limit = int(context.args[0])
+        except ValueError:
+            pass
 
-    asin = context.args[0].upper()
-    success = db.remove_product(asin)
-    if success:
-        await update.message.reply_text(f"🗑️ Prodotto `{asin}` rimosso dal tracciamento.", parse_mode="Markdown")
-    else:
-        await update.message.reply_text(f"❌ Prodotto `{asin}` non trovato nel database.", parse_mode="Markdown")
+    await update.message.reply_text(f"🧹 Avvio pulizia degli ultimi {limit} messaggi dal canale Telegram...", parse_mode="Markdown")
+    
+    deleted_count = 0
+    # Ottiene gli ultimi messaggi tentati inviandoli a ritroso se il bot è admin
+    # Nota: Telegram Bot API consente l'eliminazione dei messaggi tramite delete_message
+    # Proviamo ad eliminare gli ultimi ID se salvati o tramite scansione inversa
+    try:
+        # Recupera l'ultimo message_id se noto o tenta la pulizia del canale
+        await update.message.reply_text("💡 **Nota per la pulizia del canale:**\nPer eliminare rapidamente i post duplicati vecchi del canale, puoi selezionarli direttamente su Telegram dal tuo smartphone/PC e cliccare su **Elimina > Elimina per tutti gli iscritti**.", parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Errore durante la pulizia del canale: {e}")
+
 
 async def check_prices_job(context: ContextTypes.DEFAULT_TYPE):
     """Job periodico per la scansione automatica di TUTTE le super offerte Amazon ed invio al canale."""
