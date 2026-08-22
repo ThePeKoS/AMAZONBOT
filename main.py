@@ -1,5 +1,18 @@
 import os
 import sys
+import logging
+
+# Forza lo stream immediato dei log senza buffering su Railway e Cloud
+sys.stdout.reconfigure(line_buffering=True)
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+logger = logging.getLogger(__name__)
+
 from telegram.ext import ApplicationBuilder, CommandHandler
 from config import TELEGRAM_BOT_TOKEN, CHECK_INTERVAL_MINUTES
 from telegram_bot import (
@@ -13,8 +26,9 @@ from telegram_bot import (
 )
 
 def main():
+    logger.info("🚀 Avvio del processo principale Bot Amazon Price Tracker...")
     if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN":
-        print("\n⚠️ TELEGRAM_BOT_TOKEN non impostato nelle variabili d'ambiente cloud!\n")
+        logger.error("⚠️ TELEGRAM_BOT_TOKEN non impostato nelle variabili d'ambiente cloud!")
         return
 
     # Inizializza l'applicazione Telegram Bot con timeout aumentato a 30s per i server cloud
